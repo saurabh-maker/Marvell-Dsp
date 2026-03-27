@@ -1,0 +1,1111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MarvellIQ — Talent Intelligence Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+:root {
+  --ink:#1c1c2e; --ink2:#374151; --muted:#6b7280; --rule:#e5e7eb; --bg:#f8f9fb;
+  --w:#fff; --acc:#0d47a1; --acc2:#1565c0; --acc-p:#e8f0fc;
+  --gold:#d97706; --gold-p:#fef3c7;
+  --red:#b91c1c; --red-p:#fee2e2;
+  --grn:#15803d; --grn-p:#dcfce7;
+  --pur:#6d28d9; --pur-p:#ede9fe;
+  --nav:62px;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--ink);font-size:13.5px;line-height:1.6}
+
+/* NAV */
+.topnav{position:fixed;top:0;left:0;right:0;z-index:500;height:var(--nav);background:var(--w);
+  border-bottom:1px solid var(--rule);display:flex;align-items:center;padding:0 28px;gap:14px;
+  box-shadow:0 1px 6px rgba(0,0,0,.07)}
+.logo{font-family:'Playfair Display',serif;font-size:17px;color:var(--acc);letter-spacing:-.3px}
+.logo span{color:var(--gold)}
+.conf{background:var(--red-p);color:var(--red);font-size:10px;font-weight:700;
+  padding:2px 9px;border-radius:20px;letter-spacing:.7px}
+.tabs{display:flex;gap:3px;margin-left:auto}
+.tab-btn{background:none;border:none;cursor:pointer;padding:8px 14px;border-radius:8px;
+  font-family:'Inter',sans-serif;font-size:12.5px;font-weight:500;color:var(--muted);transition:all .15s}
+.tab-btn:hover{background:var(--acc-p);color:var(--acc)}
+.tab-btn.active{background:var(--acc);color:#fff}
+.nav-meta{font-size:11px;color:var(--muted);border-left:1px solid var(--rule);padding-left:14px;white-space:nowrap}
+
+/* MAIN */
+.main{margin-top:var(--nav);padding:26px 30px;min-height:calc(100vh - var(--nav))}
+.panel{display:none}
+.panel.active{display:block}
+
+/* SECTION HEAD */
+.sh{margin-bottom:20px}
+.sh h2{font-family:'Playfair Display',serif;font-size:20px;color:var(--ink)}
+.sh p{font-size:12px;color:var(--muted);margin-top:3px}
+
+/* ALERT */
+.alert{background:var(--gold-p);border:1px solid #fcd34d;border-left:4px solid var(--gold);
+  border-radius:10px;padding:15px 18px;margin-bottom:20px;display:flex;gap:12px;align-items:flex-start}
+.alert-ico{font-size:18px;margin-top:1px}
+.alert h4{font-size:13px;font-weight:600;margin-bottom:3px}
+.alert p{font-size:12px;color:var(--ink2);line-height:1.55}
+
+/* KPI */
+.kpi-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:13px;margin-bottom:22px}
+.kpi{background:var(--w);border:1px solid var(--rule);border-radius:10px;padding:17px;position:relative;overflow:hidden}
+.kpi::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--acc)}
+.kpi.gold::before{background:var(--gold)}
+.kpi.red::before{background:var(--red)}
+.kpi.grn::before{background:var(--grn)}
+.kpi.pur::before{background:var(--pur)}
+.kpi-lbl{font-size:10.5px;font-weight:600;letter-spacing:.6px;text-transform:uppercase;color:var(--muted)}
+.kpi-val{font-family:'Playfair Display',serif;font-size:30px;font-weight:700;color:var(--ink);line-height:1.1;margin:6px 0 3px}
+.kpi-sub{font-size:11px;color:var(--muted)}
+
+/* GRIDS */
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px}
+.g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:20px}
+.g4{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:16px;margin-bottom:20px}
+.full{grid-column:1/-1}
+
+/* CARD */
+.card{background:var(--w);border:1px solid var(--rule);border-radius:10px;padding:18px}
+.card h3{font-size:13px;font-weight:600;color:var(--ink);margin-bottom:5px}
+.card .note{font-size:11.5px;color:var(--muted);margin-bottom:14px;padding-left:8px;
+  border-left:3px solid var(--acc-p);line-height:1.5}
+.card canvas{max-height:210px}
+
+/* MAP LAYOUT */
+.map-row{display:grid;grid-template-columns:1fr 320px;gap:16px;margin-bottom:20px}
+#ov-map{height:380px;border-radius:10px;border:1px solid var(--rule)}
+.map-side{display:flex;flex-direction:column;gap:12px}
+.ms{background:var(--w);border:1px solid var(--rule);border-radius:10px;padding:14px}
+.ms h4{font-size:10.5px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin-bottom:8px}
+.city-row{display:flex;justify-content:space-between;align-items:center;
+  padding:5px 0;border-bottom:1px solid #f3f4f6;font-size:12px}
+.city-row:last-child{border:none}
+.cpill{background:var(--acc-p);color:var(--acc);font-size:10.5px;font-weight:700;padding:1px 8px;border-radius:10px}
+
+/* SUMMARY TABLE */
+.stbl{width:100%;border-collapse:collapse}
+.stbl th{background:#f1f5f9;padding:9px 12px;text-align:left;font-size:10.5px;font-weight:600;
+  text-transform:uppercase;letter-spacing:.5px;color:var(--muted);border-bottom:1px solid var(--rule)}
+.stbl td{padding:9px 12px;border-bottom:1px solid #f3f4f6;font-size:12.5px}
+.stbl tr:hover td{background:#fafbff}
+.stbl tfoot td{background:var(--acc-p);color:var(--acc);font-weight:700;padding:9px 12px}
+
+/* INSIGHT CARDS */
+.ins-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:13px;margin-bottom:20px}
+.ins{background:var(--w);border:1px solid var(--rule);border-radius:10px;padding:15px;border-top:3px solid var(--acc)}
+.ins.go{border-top-color:var(--gold)}
+.ins.rd{border-top-color:var(--red)}
+.ins.gn{border-top-color:var(--grn)}
+.ins h4{font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin-bottom:6px}
+.ins p{font-size:12.5px;color:var(--ink2);line-height:1.55}
+.ins strong{color:var(--ink);font-weight:600}
+
+/* CHIPS */
+.chip-lbl{font-size:10.5px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);
+  display:block;margin-bottom:6px}
+.chip-row{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px}
+.chip{background:var(--w);border:1.5px solid var(--rule);border-radius:20px;padding:5px 13px;
+  font-family:'Inter',sans-serif;font-size:12px;font-weight:500;color:var(--ink2);
+  cursor:pointer;transition:all .15s}
+.chip:hover{border-color:var(--acc);color:var(--acc)}
+.chip.active{background:var(--acc);border-color:var(--acc);color:#fff}
+.chip.active.cr{background:var(--red);border-color:var(--red)}
+.chip.active.cg{background:var(--grn);border-color:var(--grn)}
+.chip.active.ca{background:var(--gold);border-color:var(--gold)}
+
+/* FILTER KPI BAR */
+.fkpi-bar{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px;align-items:center}
+.fkpi{background:var(--w);border:1px solid var(--rule);border-radius:8px;padding:9px 14px;text-align:center;min-width:90px}
+.fkpi-n{font-family:'Playfair Display',serif;font-size:22px;font-weight:700;color:var(--acc);line-height:1}
+.fkpi-l{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-top:2px}
+
+/* SEARCH */
+.search-row{display:flex;align-items:center;gap:8px;background:var(--w);border:1.5px solid var(--rule);
+  border-radius:8px;padding:8px 12px;max-width:360px;margin-bottom:14px}
+.search-row input{border:none;outline:none;font-family:'Inter',sans-serif;font-size:13px;color:var(--ink);background:transparent;width:100%}
+
+/* CANDIDATE TABLE */
+.tbl-wrap{background:var(--w);border:1px solid var(--rule);border-radius:10px;overflow:auto}
+.ctbl{width:100%;border-collapse:collapse;min-width:900px}
+.ctbl thead tr{background:#f8f9fb;border-bottom:2px solid var(--rule)}
+.ctbl th{padding:10px 12px;text-align:left;font-size:10.5px;font-weight:600;letter-spacing:.5px;
+  text-transform:uppercase;color:var(--muted);white-space:nowrap;cursor:pointer;user-select:none}
+.ctbl th:hover{color:var(--acc)}
+.ctbl td{padding:11px 12px;border-bottom:1px solid #f3f4f6;vertical-align:top;font-size:12.5px}
+.ctbl tbody tr:last-child td{border:none}
+.ctbl tbody tr:hover{background:#fafbff}
+.cname{font-weight:600;color:var(--ink);display:block}
+.clink{font-size:11px;color:var(--acc2);text-decoration:none}
+.clink:hover{text-decoration:underline}
+.cphone{font-size:10.5px;color:var(--muted);margin-top:1px}
+.ctitle{color:var(--ink2)}
+.cco{font-size:11.5px;color:var(--muted);margin-top:1px}
+.csum{font-size:11.5px;color:var(--ink2);line-height:1.5;max-width:240px}
+.salmain{font-weight:600}
+.salsub{font-size:11px;color:var(--muted)}
+
+/* BADGES */
+.bd{display:inline-block;padding:2px 9px;border-radius:12px;font-size:10.5px;font-weight:600;white-space:nowrap}
+.bd-b{background:var(--acc-p);color:var(--acc)}
+.bd-g{background:var(--grn-p);color:var(--grn)}
+.bd-r{background:var(--red-p);color:var(--red)}
+.bd-a{background:var(--gold-p);color:var(--gold)}
+.bd-m{background:#f3f4f6;color:var(--muted)}
+.bd-p{background:var(--pur-p);color:var(--pur)}
+
+/* PRIORITY */
+.ptag{display:inline-flex;align-items:center;gap:3px;font-size:10px;font-weight:700;padding:2px 7px;border-radius:4px}
+.ph{background:var(--red-p);color:var(--red);border:1px solid #fecaca}
+.pm{background:var(--gold-p);color:#92400e;border:1px solid #fde68a}
+.pl{background:var(--grn-p);color:var(--grn);border:1px solid #bbf7d0}
+
+/* SALARY CALC */
+.calc-wrap{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-top:16px}
+.trow{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid #f3f4f6}
+.trow:last-child{border:none}
+.trow-lbl{flex:1;font-size:12.5px;color:var(--ink2)}
+.trow-lbl small{display:block;font-size:10.5px;color:var(--muted);margin-top:1px}
+.ninput{width:70px;padding:5px 8px;border:1.5px solid var(--rule);border-radius:7px;
+  font-family:'Inter',sans-serif;font-size:13px;font-weight:600;color:var(--acc);
+  text-align:center;outline:none}
+.ninput:focus{border-color:var(--acc)}
+.pctinput{width:65px;padding:5px 8px;border:1.5px solid var(--rule);border-radius:7px;
+  font-family:'Inter',sans-serif;font-size:13px;color:var(--ink2);text-align:center;outline:none}
+.pctinput:focus{border-color:var(--acc)}
+.out-panel{background:var(--acc-p);border-radius:10px;padding:18px}
+.out-panel h4{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--acc);margin-bottom:12px}
+.orow{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid rgba(13,71,161,.12);font-size:12.5px}
+.orow:last-child{border:none}
+.ototal{display:flex;justify-content:space-between;padding:10px 0 0;font-weight:700;font-size:14px;color:var(--acc)}
+
+/* BENCHMARK TABLE */
+.btbl{width:100%;border-collapse:collapse}
+.btbl th{padding:9px 12px;background:#f8f9fb;font-size:10.5px;font-weight:600;text-transform:uppercase;
+  letter-spacing:.5px;color:var(--muted);text-align:left;border-bottom:1px solid var(--rule)}
+.btbl td{padding:9px 12px;border-bottom:1px solid #f3f4f6;font-size:12.5px}
+.btbl tr:hover td{background:#fafbff}
+.btbl .mrow td{background:#fffbeb}
+.gap-col{color:var(--grn);font-weight:600}
+
+/* FUNNEL */
+.fn-row{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.fn-lbl{font-size:12px;color:var(--ink2);width:180px;flex-shrink:0}
+.fn-track{flex:1;height:30px;background:#f3f4f6;border-radius:6px;overflow:hidden}
+.fn-bar{height:100%;border-radius:6px;display:flex;align-items:center;padding-left:10px;font-size:11px;font-weight:700;color:#fff;transition:width .6s ease}
+.fn-ct{font-size:12px;color:var(--muted);width:26px;text-align:right;flex-shrink:0}
+
+/* ACTION BUTTON */
+.act-btn{background:var(--acc);color:#fff;border:none;border-radius:7px;padding:6px 13px;
+  font-size:12px;cursor:pointer;font-family:'Inter',sans-serif;font-weight:500}
+.act-btn:hover{background:var(--acc2)}
+
+/* scrollbar */
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-thumb{background:#d1d5db;border-radius:3px}
+
+@media(max-width:1100px){
+  .g2,.g3,.g4,.map-row,.ins-grid,.calc-wrap{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+
+<nav class="topnav">
+  <div class="logo">Marvell<span>IQ</span></div>
+  <div class="conf">⚠ CONFIDENTIAL</div>
+  <div class="tabs">
+    <button class="tab-btn active" id="tab-ov" onclick="switchTab('ov')">📊 Overview</button>
+    <button class="tab-btn" id="tab-cd" onclick="switchTab('cd')">👥 Candidate Intelligence</button>
+    <button class="tab-btn" id="tab-sal" onclick="switchTab('sal')">💰 Salary &amp; Cost Model</button>
+    <button class="tab-btn" id="tab-eng" onclick="switchTab('eng')">📬 Engagement Tracker</button>
+  </div>
+  <div class="nav-meta">Ottawa DSP · June 2025</div>
+</nav>
+
+<main class="main">
+
+<!-- ═══════════════ OVERVIEW ═══════════════ -->
+<div class="panel active" id="panel-ov">
+  <div class="sh">
+    <h2>Executive Intelligence Overview</h2>
+    <p>61 confirmed current Marvell employees · RevelioLabs primary source + LinkedIn salary enrichment · All figures CAD</p>
+  </div>
+
+  <div class="alert">
+    <div class="alert-ico">⚡</div>
+    <div>
+      <h4>Strategic Window: Leadership Departure at Marvell Ottawa</h4>
+      <p>Two senior leaders have left Marvell's coherent DSP team: <strong>Arash Farhoud (VP of DSP)</strong> and <strong>Jamal Riani (SD of DSP)</strong>. This creates a 60–90 day window where engineers may be reconsidering their options. We have mapped <strong>61 confirmed current Marvell employees</strong> — with salary estimates, flight risk, and outreach status — to build targeted, competitive offer packages.</p>
+    </div>
+  </div>
+
+  <div class="kpi-grid">
+    <div class="kpi"><div class="kpi-lbl">Current Marvell Employees</div><div class="kpi-val">61</div><div class="kpi-sub">RevelioLabs verified</div></div>
+    <div class="kpi gold"><div class="kpi-lbl">Ottawa / Kanata Team</div><div class="kpi-val">29</div><div class="kpi-sub">Primary targets</div></div>
+    <div class="kpi red"><div class="kpi-lbl">High+ Flight Risk</div><div class="kpi-val">13</div><div class="kpi-sub">Reach out now</div></div>
+    <div class="kpi grn"><div class="kpi-lbl">Replied to Outreach</div><div class="kpi-val">11</div><div class="kpi-sub">Warm leads ✓</div></div>
+    <div class="kpi"><div class="kpi-lbl">Avg Base · Ottawa</div><div class="kpi-val">$148K</div><div class="kpi-sub">Principal+ engineers</div></div>
+    <div class="kpi pur"><div class="kpi-lbl">Distinguished / Sr. Principal</div><div class="kpi-val">10</div><div class="kpi-sub">Senior technical leaders</div></div>
+    <div class="kpi gold"><div class="kpi-lbl">Avg Total Comp · Principal+</div><div class="kpi-val">$268K</div><div class="kpi-sub">Inc. equity &amp; bonus</div></div>
+    <div class="kpi grn"><div class="kpi-lbl">Recruiter Screen Reached</div><div class="kpi-val">2</div><div class="kpi-sub">Most advanced candidates</div></div>
+  </div>
+
+  <!-- MAP -->
+  <div class="map-row">
+    <div id="ov-map"></div>
+    <div class="map-side">
+      <div class="ms">
+        <h4>📍 Marvell Team by City</h4>
+        <div class="city-row"><span>Ottawa / Kanata</span><span class="cpill">29</span></div>
+        <div class="city-row"><span>Toronto / GTA / Markham</span><span class="cpill">23</span></div>
+        <div class="city-row"><span>Waterloo / Kitchener</span><span class="cpill">3</span></div>
+        <div class="city-row"><span>Vancouver</span><span class="cpill">2</span></div>
+        <div class="city-row"><span>Other Canada (remote)</span><span class="cpill">4</span></div>
+      </div>
+      <div class="ms">
+        <h4>🎨 Map Legend</h4>
+        <div style="font-size:12px;color:var(--ink2);line-height:2.1">
+          🔴 Very High / High Flight Risk<br>
+          🟡 Medium Flight Risk<br>
+          🟢 Low / Very Low Flight Risk<br>
+          <span style="font-size:11px;color:var(--muted)">Larger dot = more senior role</span>
+        </div>
+      </div>
+      <div class="ms">
+        <h4>⭐ Top Priority Targets</h4>
+        <div style="font-size:12px;color:var(--ink2);line-height:2.0">
+          🔴 <strong>Morrie Berglas</strong> · Sr. Principal · Very High<br>
+          🔴 <strong>Rob Bierman</strong> · DSP Validation Mgr · Very High<br>
+          🟡 <strong>Ilian Tzvetanov</strong> · Sr. Principal · High (replied)<br>
+          🟡 <strong>Sasan Zhalehpour</strong> · Optical Sys · High (replied)<br>
+          🟡 <strong>Siddhartha Shanker</strong> · DV Eng · High (Screen)
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CHARTS + SUMMARY TABLE -->
+  <div class="g2">
+    <div class="card">
+      <h3>Team Breakdown by Level &amp; Location</h3>
+      <div class="note">How many engineers are in each city at each seniority level, and what they earn. Ottawa has the highest concentration of senior DSP talent in Canada.</div>
+      <table class="stbl">
+        <thead><tr><th>Level</th><th>Ottawa</th><th>Toronto</th><th>Other</th><th>Total</th><th>Avg Base</th></tr></thead>
+        <tbody>
+          <tr><td>Distinguished / Architect</td><td>3</td><td>0</td><td>0</td><td><strong>3</strong></td><td>$262K</td></tr>
+          <tr><td>Sr. Principal / AVP</td><td>5</td><td>2</td><td>1</td><td><strong>8</strong></td><td>$196K</td></tr>
+          <tr><td>Director / Sr. Director</td><td>4</td><td>2</td><td>0</td><td><strong>6</strong></td><td>$228K</td></tr>
+          <tr><td>Principal Engineer</td><td>7</td><td>9</td><td>4</td><td><strong>20</strong></td><td>$161K</td></tr>
+          <tr><td>Senior Staff Engineer</td><td>7</td><td>7</td><td>2</td><td><strong>16</strong></td><td>$115K</td></tr>
+          <tr><td>Staff / Engineer</td><td>3</td><td>3</td><td>2</td><td><strong>8</strong></td><td>$97K</td></tr>
+        </tbody>
+        <tfoot><tr><td><strong>TOTAL</strong></td><td><strong>29</strong></td><td><strong>23</strong></td><td><strong>9</strong></td><td><strong>61</strong></td><td><strong>$155K</strong></td></tr></tfoot>
+      </table>
+    </div>
+    <div class="card">
+      <h3>Where Is the Marvell DSP Team?</h3>
+      <div class="note">Nearly half the team is in Ottawa — exactly where the leadership disruption happened. This is where your outreach should focus.</div>
+      <canvas id="chartCity"></canvas>
+    </div>
+  </div>
+
+  <div class="g3">
+    <div class="card">
+      <h3>Flight Risk Breakdown</h3>
+      <div class="note">Flight risk = how likely someone is to leave. "Very High" and "High" are your priority — they are most open to a conversation right now.</div>
+      <canvas id="chartFlight"></canvas>
+    </div>
+    <div class="card">
+      <h3>Average Salary by Level (CAD)</h3>
+      <div class="note">Seniority ladder in dollars. The jump from Staff to Principal ($97K→$161K) shows how quickly value rises with experience in DSP.</div>
+      <canvas id="chartSalLvl"></canvas>
+    </div>
+    <div class="card">
+      <h3>Years of Experience Distribution</h3>
+      <div class="note">Most of the team has 12–25 years of experience — an exceptionally senior group. This expertise is extremely rare and took decades to build.</div>
+      <canvas id="chartYOE"></canvas>
+    </div>
+  </div>
+
+  <div class="ins-grid">
+    <div class="ins">
+      <h4>🎯 Who to Target First</h4>
+      <p><strong>13 engineers</strong> are High or Very High flight risk. <strong>Morrie Berglas</strong> (Sr. Principal, 30 yrs, $429K total) and <strong>Rob Bierman</strong> (Validation Mgr) are Very High risk and not yet contacted. With the leadership gone, now is the perfect moment to reach out personally.</p>
+    </div>
+    <div class="ins go">
+      <h4>💬 Already Warm — Replied to Us</h4>
+      <p><strong>11 current Marvell employees</strong> have already replied to outreach. These are your hottest leads: <strong>Basel Alnabulsi, Ilian Tzvetanov, Sasan Zhalehpour, Rasheeq M., Mike Takefman, Sidney Jose, Arash Forooshani, Mehdi Noormohammadi, Alexander Zassoko, Reza Nejad, Shahab Mojahedi.</strong> Follow up this week.</p>
+    </div>
+    <div class="ins rd">
+      <h4>⚠️ Compensation Gap = Your Lever</h4>
+      <p>Marvell's Ottawa team is paid <strong>10–20% below market</strong> at Principal and above vs. AMD and Qualcomm. A competitive offer at market rate — especially with a meaningful sign-on and RSU grant — would be compelling for engineers already feeling unsettled by the leadership exits.</p>
+    </div>
+    <div class="ins gn">
+      <h4>🧠 Irreplaceable Expertise Cluster</h4>
+      <p>Ottawa holds one of Canada's densest concentrations of <strong>coherent DSP talent</strong>: WaveLogic architecture, 800G SerDes, FEC design, and optical modem silicon. This team took 20+ years to assemble. The window to approach them will not stay open long.</p>
+    </div>
+    <div class="ins">
+      <h4>🏢 Competitive Landscape</h4>
+      <p>AMD (Ottawa &amp; Waterloo), Qualcomm (Ottawa), and Astera Labs (Ottawa) are the main competitor employers in this market. Several former Marvell engineers are already there. Use our cost model in the Salary tab to build offers that beat what these companies can offer.</p>
+    </div>
+    <div class="ins go">
+      <h4>📋 Recommended Action Plan</h4>
+      <p><strong>This week:</strong> Follow up with all 11 replied candidates. <strong>Week 2:</strong> Personal outreach to Very High / High risk targets — reference the leadership change. <strong>Week 3:</strong> Director-level conversations. Use the Salary tab to model competitive packages for each level before you call.</p>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════ CANDIDATES ═══════════════ -->
+<div class="panel" id="panel-cd">
+  <div class="sh">
+    <h2>Candidate Intelligence</h2>
+    <p>61 confirmed current Marvell Technology employees only · Non-Marvell candidates removed · RevelioLabs primary · LinkedIn salary enrichment</p>
+  </div>
+
+  <span class="chip-lbl">Filter by Location</span>
+  <div class="chip-row" id="chips-loc">
+    <button class="chip active" data-grp="loc" data-val="">All Locations</button>
+    <button class="chip" data-grp="loc" data-val="Ottawa">Ottawa / Kanata</button>
+    <button class="chip" data-grp="loc" data-val="Toronto">Toronto / GTA</button>
+    <button class="chip" data-grp="loc" data-val="Waterloo">Waterloo / Kitchener</button>
+    <button class="chip" data-grp="loc" data-val="Vancouver">Vancouver</button>
+    <button class="chip" data-grp="loc" data-val="Other">Other Canada</button>
+  </div>
+
+  <span class="chip-lbl">Filter by Seniority Level</span>
+  <div class="chip-row" id="chips-lv">
+    <button class="chip active" data-grp="lv" data-val="">All Levels</button>
+    <button class="chip" data-grp="lv" data-val="Distinguished">Distinguished</button>
+    <button class="chip" data-grp="lv" data-val="Sr. Principal">Sr. Principal</button>
+    <button class="chip" data-grp="lv" data-val="Director">Director / AVP</button>
+    <button class="chip" data-grp="lv" data-val="Principal">Principal</button>
+    <button class="chip" data-grp="lv" data-val="Senior Staff">Senior Staff</button>
+    <button class="chip" data-grp="lv" data-val="Staff">Staff</button>
+  </div>
+
+  <span class="chip-lbl">Filter by Flight Risk</span>
+  <div class="chip-row" id="chips-fl">
+    <button class="chip active" data-grp="fl" data-val="">All Risk</button>
+    <button class="chip cr" data-grp="fl" data-val="Very High">Very High ⚠</button>
+    <button class="chip cr" data-grp="fl" data-val="High">High</button>
+    <button class="chip" data-grp="fl" data-val="Medium">Medium</button>
+    <button class="chip cg" data-grp="fl" data-val="Low">Low</button>
+    <button class="chip cg" data-grp="fl" data-val="Very Low">Very Low</button>
+  </div>
+
+  <span class="chip-lbl">Filter by Engagement Status</span>
+  <div class="chip-row" id="chips-eg">
+    <button class="chip active" data-grp="eg" data-val="">All Status</button>
+    <button class="chip cg" data-grp="eg" data-val="screen">🎯 Recruiter Screen</button>
+    <button class="chip cg" data-grp="eg" data-val="replied">✅ Replied</button>
+    <button class="chip ca" data-grp="eg" data-val="contacted">📧 Contacted</button>
+    <button class="chip" data-grp="eg" data-val="uncontacted">⬜ Not Contacted</button>
+    <button class="chip cr" data-grp="eg" data-val="dnc">🚫 Do Not Contact</button>
+  </div>
+
+  <div class="fkpi-bar">
+    <div class="fkpi"><div class="fkpi-n" id="fk-total">61</div><div class="fkpi-l">Showing</div></div>
+    <div class="fkpi"><div class="fkpi-n" id="fk-ot">29</div><div class="fkpi-l">Ottawa</div></div>
+    <div class="fkpi"><div class="fkpi-n" id="fk-to">23</div><div class="fkpi-l">Toronto/GTA</div></div>
+    <div class="fkpi"><div class="fkpi-n" id="fk-hi">13</div><div class="fkpi-l">High+ Risk</div></div>
+    <div class="fkpi"><div class="fkpi-n" id="fk-warm">13</div><div class="fkpi-l">Replied/Screen</div></div>
+    <div class="fkpi"><div class="fkpi-n" id="fk-avg">$155K</div><div class="fkpi-l">Avg Base</div></div>
+  </div>
+
+  <div class="search-row">
+    <span style="color:var(--muted)">🔍</span>
+    <input type="text" id="csearch" placeholder="Search by name, title, location…">
+  </div>
+
+  <div class="tbl-wrap">
+    <table class="ctbl">
+      <thead>
+        <tr>
+          <th data-sort="n">Candidate</th>
+          <th>Title</th>
+          <th data-sort="loc">Location</th>
+          <th>Level</th>
+          <th data-sort="base">Base Salary</th>
+          <th data-sort="tot">Total Comp</th>
+          <th data-sort="yoe">YOE</th>
+          <th data-sort="fl">Flight Risk</th>
+          <th>Engagement</th>
+          <th>Priority</th>
+          <th>Role Summary</th>
+        </tr>
+      </thead>
+      <tbody id="ctbody"></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ═══════════════ SALARY ═══════════════ -->
+<div class="panel" id="panel-sal">
+  <div class="sh">
+    <h2>Salary Benchmarking &amp; Cost Modeling</h2>
+    <p>Interactive calculator · Market comparison vs AMD, Qualcomm, Astera Labs · All figures in CAD</p>
+  </div>
+
+  <div class="alert">
+    <div class="alert-ico">💡</div>
+    <div>
+      <h4>How to Use This Page</h4>
+      <p>The <strong>Cost Calculator</strong> lets you enter how many engineers to hire at each level and the salary premium to offer. It calculates total first-year investment including sign-on, equity, bonus, and recruiting fees. The <strong>Market Benchmark Table</strong> below shows how Marvell compares to competitors so you know exactly how much of a premium is needed to win each candidate.</p>
+    </div>
+  </div>
+
+  <!-- CALCULATOR -->
+  <div class="card" style="margin-bottom:18px">
+    <h3>🧮 Hire Cost Calculator — Ottawa DSP Talent</h3>
+    <p class="note">Enter number of engineers to hire per level and your offer premium (%) above their current Marvell base. The calculator will show total Year-1 investment including all components.</p>
+    <div class="calc-wrap">
+      <div>
+        <div style="font-size:10.5px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin-bottom:6px;display:grid;grid-template-columns:1fr 70px 65px 30px;gap:10px">
+          <span>Level (Avg Base)</span><span style="text-align:center"># to Hire</span><span style="text-align:center">Premium</span><span></span>
+        </div>
+        <div class="trow">
+          <div class="trow-lbl">Distinguished Engineer<small>Avg current base: $262K</small></div>
+          <input class="ninput" type="number" id="n0" value="0" min="0">
+          <input class="pctinput" type="number" id="p0" value="15" min="0">
+          <span style="font-size:12px;color:var(--muted)">%</span>
+        </div>
+        <div class="trow">
+          <div class="trow-lbl">Sr. Principal / AVP<small>Avg current base: $196K</small></div>
+          <input class="ninput" type="number" id="n1" value="1" min="0">
+          <input class="pctinput" type="number" id="p1" value="20" min="0">
+          <span style="font-size:12px;color:var(--muted)">%</span>
+        </div>
+        <div class="trow">
+          <div class="trow-lbl">Director / Sr. Director<small>Avg current base: $228K</small></div>
+          <input class="ninput" type="number" id="n2" value="1" min="0">
+          <input class="pctinput" type="number" id="p2" value="18" min="0">
+          <span style="font-size:12px;color:var(--muted)">%</span>
+        </div>
+        <div class="trow">
+          <div class="trow-lbl">Principal Engineer<small>Avg current base: $161K</small></div>
+          <input class="ninput" type="number" id="n3" value="3" min="0">
+          <input class="pctinput" type="number" id="p3" value="18" min="0">
+          <span style="font-size:12px;color:var(--muted)">%</span>
+        </div>
+        <div class="trow">
+          <div class="trow-lbl">Senior Staff Engineer<small>Avg current base: $115K</small></div>
+          <input class="ninput" type="number" id="n4" value="2" min="0">
+          <input class="pctinput" type="number" id="p4" value="15" min="0">
+          <span style="font-size:12px;color:var(--muted)">%</span>
+        </div>
+        <div class="trow">
+          <div class="trow-lbl">Staff Engineer<small>Avg current base: $97K</small></div>
+          <input class="ninput" type="number" id="n5" value="1" min="0">
+          <input class="pctinput" type="number" id="p5" value="12" min="0">
+          <span style="font-size:12px;color:var(--muted)">%</span>
+        </div>
+        <button onclick="runCalc()" style="margin-top:14px;padding:9px 20px;background:var(--acc);color:#fff;border:none;border-radius:8px;cursor:pointer;font-family:Inter,sans-serif;font-size:13px;font-weight:600">Calculate Cost →</button>
+      </div>
+      <div>
+        <div class="out-panel">
+          <h4>📊 Year-1 Cost Breakdown</h4>
+          <div class="orow"><span>Total engineers hiring</span><span id="o-hc" style="font-weight:600">8 engineers</span></div>
+          <div class="orow"><span>Annual base salaries</span><span id="o-base">—</span></div>
+          <div class="orow"><span>Sign-on bonus (10% of base)</span><span id="o-so">—</span></div>
+          <div class="orow"><span>RSU grant Year-1 (70% ÷ 3yr vest)</span><span id="o-rsu">—</span></div>
+          <div class="orow"><span>Performance bonus (12% of base)</span><span id="o-bon">—</span></div>
+          <div class="orow"><span>Recruiting fees (15% of base)</span><span id="o-rec">—</span></div>
+          <div class="ototal"><span>💰 Total Year-1 Investment</span><span id="o-tot">—</span></div>
+          <div style="margin-top:14px;font-size:11.5px;color:var(--acc2);line-height:1.6;border-top:1px solid rgba(13,71,161,.15);padding-top:12px">
+            <strong>Ottawa vs Toronto note:</strong> Ottawa engineers earn ~5–8% less than Toronto peers at the same level. This model uses Ottawa averages — adjust the premium % upward if targeting Toronto-based candidates.
+          </div>
+        </div>
+        <div class="card" style="margin-top:14px">
+          <h3>Salary Ranges by Level (Ottawa DSP)</h3>
+          <div class="note">Min → Average → Max base salary for each level currently at Marvell Ottawa.</div>
+          <canvas id="chartBands"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- BENCHMARK TABLE -->
+  <div class="card" style="margin-bottom:18px">
+    <h3>Market Benchmark — Marvell vs Competitors (Canada, CAD $K)</h3>
+    <div class="note">Estimated average base salaries at each company. The "Target Offer" column shows what you need to offer to be competitive. The "Gap" is how much more than Marvell's current pay you need to offer to win the hire.</div>
+    <div style="overflow-x:auto">
+      <table class="btbl">
+        <thead>
+          <tr>
+            <th>Level</th><th>Marvell Now</th><th>AMD Ottawa</th><th>Qualcomm Ottawa</th><th>Astera Labs</th><th>Target Offer</th><th>Gap vs Marvell</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr class="mrow"><td><strong>Distinguished</strong></td><td>$255–270K</td><td>$280–300K</td><td>$270–295K</td><td>$285–320K</td><td><strong>$305–340K</strong></td><td class="gap-col">+15–20%</td></tr>
+          <tr><td><strong>Sr. Principal</strong></td><td>$165–210K</td><td>$185–225K</td><td>$180–220K</td><td>$190–235K</td><td><strong>$200–245K</strong></td><td class="gap-col">+15–18%</td></tr>
+          <tr class="mrow"><td><strong>Director</strong></td><td>$190–280K</td><td>$220–290K</td><td>$210–280K</td><td>$230–310K</td><td><strong>$230–310K</strong></td><td class="gap-col">+12–18%</td></tr>
+          <tr><td><strong>Principal</strong></td><td>$122–225K</td><td>$155–235K</td><td>$150–225K</td><td>$165–240K</td><td><strong>$160–245K</strong></td><td class="gap-col">+15–20%</td></tr>
+          <tr class="mrow"><td><strong>Senior Staff</strong></td><td>$96–145K</td><td>$115–160K</td><td>$110–155K</td><td>$120–165K</td><td><strong>$115–165K</strong></td><td class="gap-col">+10–15%</td></tr>
+          <tr><td><strong>Staff</strong></td><td>$83–117K</td><td>$95–130K</td><td>$92–125K</td><td>$100–135K</td><td><strong>$95–130K</strong></td><td class="gap-col">+8–12%</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="g2">
+    <div class="card">
+      <h3>Marvell vs Competitor Average Pay by Level</h3>
+      <div class="note">Blue = Marvell today. Orange = what competitors offer. The gap is real and engineers know it — use this to justify your offer premiums.</div>
+      <canvas id="chartBench"></canvas>
+    </div>
+    <div class="card">
+      <h3>Ottawa vs Toronto — Same Level, Different Pay</h3>
+      <div class="note">Ottawa engineers earn 5–8% less than Toronto at the same level. Hiring from Ottawa is slightly more efficient, but the expertise is just as strong — especially for coherent DSP.</div>
+      <canvas id="chartOvT"></canvas>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════ ENGAGEMENT ═══════════════ -->
+<div class="panel" id="panel-eng">
+  <div class="sh">
+    <h2>Engagement Tracker</h2>
+    <p>Pipeline status for all 61 current Marvell employees · Outreach activity from RevelioLabs project data</p>
+  </div>
+
+  <div class="kpi-grid" style="grid-template-columns:repeat(5,1fr)">
+    <div class="kpi"><div class="kpi-lbl">Not Contacted</div><div class="kpi-val" style="font-size:26px">24</div><div class="kpi-sub">Untouched pipeline</div></div>
+    <div class="kpi gold"><div class="kpi-lbl">Contacted</div><div class="kpi-val" style="font-size:26px">19</div><div class="kpi-sub">Outreach sent</div></div>
+    <div class="kpi grn"><div class="kpi-lbl">Replied</div><div class="kpi-val" style="font-size:26px">11</div><div class="kpi-sub">Positive engagement ✓</div></div>
+    <div class="kpi pur"><div class="kpi-lbl">Recruiter Screen</div><div class="kpi-val" style="font-size:26px">2</div><div class="kpi-sub">Most advanced</div></div>
+    <div class="kpi red"><div class="kpi-lbl">Do Not Contact</div><div class="kpi-val" style="font-size:26px">5</div><div class="kpi-sub">Removed</div></div>
+  </div>
+
+  <div class="g2">
+    <div class="card">
+      <h3>Outreach Funnel</h3>
+      <div class="note">Like a sales funnel — we start with all 61 Marvell employees and track who has responded. 38% have been contacted, and 21% have responded positively.</div>
+      <div id="funnel-wrap" style="margin-top:12px"></div>
+    </div>
+    <div class="card">
+      <h3>Engagement by Seniority Level</h3>
+      <div class="note">Are we reaching the right people? Grey = total in pipeline. Blue = already contacted or warmer. We have room to contact more Principal and Sr. Principal engineers.</div>
+      <canvas id="chartEngSen"></canvas>
+    </div>
+  </div>
+
+  <div class="sh" style="margin-top:6px">
+    <h2 style="font-size:16px">🔥 Warm Leads — Replied or Advanced to Screen</h2>
+    <p>These candidates have already shown interest. They are your highest-priority follow-ups this week.</p>
+  </div>
+  <div class="tbl-wrap">
+    <table class="ctbl" style="min-width:700px">
+      <thead>
+        <tr>
+          <th>Candidate</th><th>Title</th><th>Location</th><th>Est. Base</th><th>Flight Risk</th><th>Status</th><th>Contact</th>
+        </tr>
+      </thead>
+      <tbody id="hotbody"></tbody>
+    </table>
+  </div>
+</div>
+
+</main>
+
+<script>
+// =============================================================
+// DATA — 61 confirmed current Marvell Technology employees only
+// Non-Marvell removed: Dragos Cartina (Inphi), Ben Smith (Inphi),
+// Geneviève Cyr (2942020 Canada Inc.) from LinkedIn.
+// 38 non-Marvell from Revelio used only for salary benchmarking.
+// =============================================================
+var DATA = [
+  // OTTAWA / KANATA
+  {n:"Basel Alnabulsi",ti:"Distinguished Engineer",loc:"Ottawa",city:"Ottawa",lat:45.360,lng:-75.912,lv:"Distinguished",base:261173,tot:315823,yoe:21,fl:"Low",eng:"replied",li:"https://linkedin.com/in/basel-alnabulsi-2934986",pr:"HIGH",phone:"+1 (613) 720-3131",sm:"Distinguished Engineer and technical authority at Marvell Ottawa. 21 years in SerDes and coherent DSP systems. Expert in 400G-800G coherent modem architecture and WaveLogic generations. Replied to outreach — highest-value warm lead in Ottawa."},
+  {n:"Mike Takefman",ti:"Distinguished Engineer",loc:"Ottawa",city:"Ottawa",lat:45.372,lng:-75.904,lv:"Distinguished",base:255000,tot:312000,yoe:30,fl:"Medium",eng:"replied",li:"https://linkedin.com/in/mike-takefman-728122",pr:"HIGH",phone:"",sm:"30-year veteran Distinguished Engineer at Marvell Ottawa. Drives WaveLogic coherent DSP architecture. Previously Nortel/Ciena. Deep photonics ecosystem roots. Replied to asic design outreach — warm target with exceptional institutional knowledge."},
+  {n:"David Bond",ti:"Distinguished Architect",loc:"Ottawa",city:"Kanata",lat:45.352,lng:-75.921,lv:"Distinguished",base:268000,tot:338000,yoe:28,fl:"Medium",eng:"contacted",li:"https://linkedin.com/in/david-bond-0a47b2",pr:"HIGH",phone:"",sm:"Distinguished Architect in Kanata driving coherent DSP silicon architecture. 28 years translating communication theory into tape-out-ready microarchitecture. Expert in FEC and adaptive DSP equalization IP for optical modem chips."},
+  {n:"Tarun Setya",ti:"Senior Director of Engineering",loc:"Ottawa",city:"Ottawa",lat:45.368,lng:-75.927,lv:"Director",base:278726,tot:354463,yoe:27,fl:"Low",eng:"uncontacted",li:"https://linkedin.com/in/tarunsetya",pr:"HIGH",phone:"",sm:"Senior Director leading Ottawa engineering for coherent DSP ASICs. $354K total comp and 27 years of semiconductor leadership. With Farhoud and Riani gone, a careful senior-level conversation may resonate — not yet contacted, high upside."},
+  {n:"Chet Lad",ti:"Sr. Director, Digital ASIC Design",loc:"Ottawa",city:"Ottawa",lat:45.355,lng:-75.918,lv:"Director",base:211791,tot:299167,yoe:29,fl:"Medium",eng:"contacted",li:"https://linkedin.com/in/chet-lad",pr:"HIGH",phone:"+1 (613) 852-7138",sm:"Sr. Director overseeing Ottawa digital ASIC design teams. 29 years managing end-to-end chip development. Post-leadership-departure, his own calculus about the organization may be shifting. In active pipeline."},
+  {n:"Stephen Adolph",ti:"AVP CDSP Product Line Management",loc:"Ottawa",city:"Ottawa",lat:45.362,lng:-75.924,lv:"Director",base:144043,tot:227210,yoe:36,fl:"Medium",eng:"dnc",li:"https://linkedin.com/in/stephen-adolph-b926a71",pr:"MED",phone:"",sm:"AVP managing Marvell's coherent DSP product line strategy. 36 years spanning product roadmap and cross-functional program execution. Currently DNC — reassess post-leadership disruption."},
+  {n:"Morrie Berglas",ti:"Sr. Principal Engineer",loc:"Ottawa",city:"Ottawa",lat:45.378,lng:-75.895,lv:"Sr. Principal",base:186461,tot:428790,yoe:30,fl:"Very High",eng:"dnc",li:"https://linkedin.com/in/morrie-berglas-719569b",pr:"HIGH",phone:"",sm:"Sr. Principal Engineer with 30 years and exceptional $429K total comp (RSU-heavy). Very High flight risk post-leadership departure. His DNC status may change. Expert in coherent optical DSP algorithms and ASIC architecture. Highest-priority target."},
+  {n:"Ilian Tzvetanov",ti:"Sr. Principal Engineer, Digital IC Eng.",loc:"Ottawa",city:"Ottawa",lat:45.357,lng:-75.908,lv:"Sr. Principal",base:166391,tot:260798,yoe:35,fl:"High",eng:"replied",li:"https://linkedin.com/in/ilian-tzvetanov-5117861",pr:"HIGH",phone:"",sm:"Senior Principal Digital IC Engineer with 35 years in RTL design for coherent DSP ASICs. High flight risk — replied to outreach. Expert in synthesis, timing closure, and low-power design for optical modem chips."},
+  {n:"Sina NaderiShahi",ti:"Sr. Principal Engineer, Architecture DSP",loc:"Ottawa",city:"Kanata",lat:45.349,lng:-75.930,lv:"Sr. Principal",base:142864,tot:209069,yoe:19,fl:"Low",eng:"contacted",li:"https://linkedin.com/in/snaderi",pr:"HIGH",phone:"",sm:"Senior Principal DSP Architect with 19 years shaping Marvell's WaveLogic core. Expert in algorithm development for 400G/800G coherent optical systems — FEC, equalization, and carrier recovery."},
+  {n:"Lawrence Said",ti:"Senior Principal Engineer",loc:"Ottawa",city:"Ottawa",lat:45.363,lng:-75.916,lv:"Sr. Principal",base:175000,tot:240000,yoe:22,fl:"Medium",eng:"contacted",li:"https://linkedin.com/in/lawrence-said-20193920",pr:"HIGH",phone:"+1 (613) 316-9041",sm:"Senior Principal Engineer at Marvell Ottawa. 22 years in ASIC verification and design for coherent optical systems. In active pipeline — technical leader with deep DSP and Ottawa semiconductor background."},
+  {n:"Harry Yang",ti:"Principal Verification Engineer",loc:"Ottawa",city:"Ottawa",lat:45.352,lng:-75.883,lv:"Principal",base:181918,tot:290957,yoe:28,fl:"Medium",eng:"dnc",li:"https://linkedin.com/in/harry-yang-0a826111",pr:"MED",phone:"",sm:"Principal DV Engineer with 28 years specializing in complex DSP ASIC verification. Expert in UVM/SystemVerilog, formal verification, and coverage-driven methodologies for high-speed optical ASICs. Currently DNC."},
+  {n:"Yasin Miar",ti:"Principal Engineer - System Validation",loc:"Ottawa",city:"Ottawa",lat:45.344,lng:-75.897,lv:"Principal",base:90140,tot:112763,yoe:23,fl:"High",eng:"dnc",li:"https://linkedin.com/in/yasin-miar-4625b43",pr:"MED",phone:"+1 (613) 600-7161",sm:"Principal validation engineer, PhD, 23 years in ASIC system-level testing for coherent optical products. High flight risk. DNC — monitor for status change post leadership disruption."},
+  {n:"Shahab Mojahedi",ti:"Principal Firmware Engineer",loc:"Ottawa",city:"Ottawa",lat:45.370,lng:-75.900,lv:"Principal",base:115854,tot:127433,yoe:30,fl:"High",eng:"replied",li:"https://linkedin.com/in/shmojahedi",pr:"HIGH",phone:"",sm:"Principal Firmware Engineer with 30 years in embedded software for coherent optical DSP platforms. Replied to WaveLogic FAE outreach. Expert in real-time DSP firmware for 400G/800G optical modules. High flight risk — warm lead."},
+  {n:"Mehdi Noormohammadi Khiarak",ti:"Principal AMS Design Engineer",loc:"Ottawa",city:"Ottawa",lat:45.358,lng:-75.913,lv:"Principal",base:168000,tot:215000,yoe:18,fl:"Medium",eng:"replied",li:"https://linkedin.com/in/mehdi-noormohammadi-khiarak-11414853",pr:"HIGH",phone:"",sm:"Principal Analog Mixed Signal IC Design Engineer at Marvell Ottawa. 18 years designing precision AMS circuits for coherent DSP ASICs — ADC/DAC front-ends, clock distribution, electro-optic interfaces. Replied to outreach."},
+  {n:"Sasan Zhalehpour",ti:"Optical System Engineer",loc:"Ottawa",city:"Ottawa",lat:45.354,lng:-75.910,lv:"Sr. Principal",base:106114,tot:116242,yoe:19,fl:"High",eng:"replied",li:"https://linkedin.com/in/sasanzhalehpour",pr:"HIGH",phone:"+1 (581) 888-2434",sm:"Optical System Engineer with 19 years in coherent optical system design. High flight risk. Expert in optical link budgets, DSP-optical co-design, and transceiver characterization for 400G/800G/1.6T. Replied to outreach."},
+  {n:"Jonathon Lee",ti:"Senior Manager DSP Firmware",loc:"Ottawa",city:"Ottawa",lat:45.343,lng:-75.929,lv:"Director",base:122421,tot:135001,yoe:16,fl:"Low",eng:"contacted",li:"https://linkedin.com/in/jonathondlee",pr:"MED",phone:"+1 409-771-2933",sm:"Senior Manager of DSP Firmware at Marvell Ottawa. 16 years managing embedded real-time firmware for coherent optical DSP modules. Bridge between algorithm teams and silicon integration."},
+  {n:"Amir Dadjoo",ti:"Principal Engineer, Design Verification",loc:"Ottawa",city:"Ottawa",lat:45.361,lng:-75.920,lv:"Principal",base:165000,tot:210000,yoe:15,fl:"Medium",eng:"contacted",li:"https://linkedin.com/in/amir-dadjoo-6448649",pr:"MED",phone:"",sm:"Principal DV Engineer at Marvell Ottawa. 15 years in ASIC verification for coherent DSP products using UVM-based environments and formal verification. In active outreach pipeline."},
+  {n:"Christopher Kennedy",ti:"Principal Engineer",loc:"Ottawa",city:"Kanata",lat:45.348,lng:-75.938,lv:"Principal",base:165000,tot:205000,yoe:20,fl:"Medium",eng:"contacted",li:"https://linkedin.com/in/christopherkennedypeng",pr:"LOW",phone:"",sm:"Principal Engineer at Marvell Kanata with 20 years in coherent digital IC design. In active ASIC Engagement 2025 pipeline. Expert in DSP datapath RTL design and pipeline architecture."},
+  {n:"Albert Cheng",ti:"Principal Engineer",loc:"Ottawa",city:"Ottawa",lat:45.366,lng:-75.908,lv:"Principal",base:165000,tot:208000,yoe:17,fl:"Medium",eng:"dnc",li:"https://linkedin.com/in/albert-cheng-83a95135",pr:"LOW",phone:"",sm:"Principal Engineer at Marvell Ottawa (Marvell Semiconductor). 17 years in coherent optical ASIC design and system integration. DNC — revisit after leadership disruption settles."},
+  {n:"Denis Rheault",ti:"Sr ASIC/FPGA Design Engineer",loc:"Ottawa",city:"Ottawa",lat:45.350,lng:-75.895,lv:"Senior Staff",base:98801,tot:124224,yoe:30,fl:"Medium",eng:"contacted",li:"https://linkedin.com/in/denis-rheault-ab2b792",pr:"LOW",phone:"+1 (613) 898-9096",sm:"30-year ASIC/FPGA design engineer at Marvell Ottawa. Broad RTL and FPGA prototyping expertise for DSP ASIC pre-silicon validation. Experienced in Vivado/Quartus flows for coherent DSP algorithm prototyping."},
+  {n:"Thomas Pepler",ti:"Senior Staff Engineer",loc:"Ottawa",city:"Ottawa",lat:45.352,lng:-75.902,lv:"Senior Staff",base:107958,tot:118606,yoe:16,fl:"Low",eng:"contacted",li:"https://linkedin.com/in/thomas-pepler-b28b0b12",pr:"MED",phone:"+1 (613) 853-5927",sm:"Senior Staff Engineer on Marvell Ottawa's coherent pluggable transponder team. 16 years in high-speed optical systems — DSP-based coherent receiver design and CFP2-ACO/DCO module characterization."},
+  {n:"Rasheeq M.",ti:"Senior Staff Firmware Engineer",loc:"Ottawa",city:"Ottawa",lat:45.360,lng:-75.922,lv:"Senior Staff",base:111541,tot:119487,yoe:13,fl:"Very Low",eng:"replied",li:"https://linkedin.com/in/rasheeqm",pr:"MED",phone:"",sm:"Senior Staff Firmware Engineer for Marvell's coherent optical DSP platforms. 13 years in real-time C/C++ firmware for coherent pluggable transponder bring-up and diagnostics. Replied to Coherent Pluggable outreach."},
+  {n:"Nischinta Rath",ti:"Senior Staff AMS Layout Engineer",loc:"Ottawa",city:"Ottawa",lat:45.368,lng:-75.917,lv:"Senior Staff",base:84736,tot:104936,yoe:12,fl:"Medium",eng:"uncontacted",li:"https://linkedin.com/in/nischinta-rath-28950875",pr:"LOW",phone:"+1 (819) 328-6787",sm:"Senior Staff AMS Layout Engineer at Marvell Ottawa. 12 years in precision analog layout for high-speed optical networking chips — custom cell and full-custom layout for ADC/DAC and RF-analog circuit blocks."},
+  {n:"Siddhartha Shanker",ti:"DV Engineer",loc:"Ottawa",city:"Ottawa",lat:45.340,lng:-75.905,lv:"Senior Staff",base:87959,tot:94020,yoe:19,fl:"High",eng:"screen",li:"https://linkedin.com/in/siddhartha-shanker-9113146",pr:"HIGH",phone:"+1 (613) 981-1869",sm:"Design Verification engineer with 19 years in ASIC validation for DSP chips. Advanced to Recruiter Screen — most progressed candidate in the pipeline. Deep expertise in functional coverage, UVM testbench, and coherent modem verification."},
+  {n:"Sidney Jose",ti:"Senior SerDes DSP/System Engineer",loc:"Ottawa",city:"Ottawa",lat:45.332,lng:-75.912,lv:"Senior Staff",base:90956,tot:112966,yoe:7,fl:"Medium",eng:"replied",li:"https://linkedin.com/in/sidney-jose",pr:"HIGH",phone:"",sm:"Specialist in SerDes PHY and coherent DSP system engineering. 7 years in equalization, jitter analysis, and high-speed signal integrity for 400G/800G optical interfaces. Replied to both SerDes and WaveLogic FAE outreach — highly engaged."},
+  {n:"Rob Bierman",ti:"DSP Validation Manager",loc:"Ottawa",city:"Ottawa",lat:45.353,lng:-75.940,lv:"Director",base:92303,tot:121873,yoe:19,fl:"Very High",eng:"uncontacted",li:"https://linkedin.com/in/rob-bierman-496731a8",pr:"HIGH",phone:"",sm:"DSP Validation Manager at Marvell Ottawa. 19 years in hardware validation for high-speed optical systems. Very High flight risk — not yet contacted. Leadership vacuum creates perfect opening. Expert in coherent optical module characterization."},
+  {n:"Kaveh Firouzi",ti:"Staff Engineer",loc:"Ottawa",city:"Kanata",lat:45.355,lng:-75.928,lv:"Staff",base:104088,tot:110601,yoe:18,fl:"Medium",eng:"contacted",li:"https://linkedin.com/in/kaveh-firouzi-44172a4b",pr:"LOW",phone:"+1 (613) 869-3460",sm:"Staff Engineer in Marvell Kanata. 18 years in analog and mixed-signal IC design supporting coherent DSP ASIC programmes. Expert in CDR, PLLs, and analog front-end design for 100G+ optical interfaces."},
+  {n:"Jan Grabkowski",ti:"Staff Firmware Engineer",loc:"Ottawa",city:"Ottawa",lat:45.370,lng:-75.910,lv:"Staff",base:104011,tot:110675,yoe:7,fl:"Very Low",eng:"contacted",li:"https://linkedin.com/in/jan-grabkowski-84319714b",pr:"LOW",phone:"",sm:"Staff Firmware Engineer developing embedded DSP firmware for Marvell WaveLogic coherent optical platforms. 7 years in real-time firmware, HAL layers, and BSP bring-up for optical ASICs."},
+  {n:"Vitaly Riger",ti:"Digital Designer",loc:"Ottawa",city:"Ottawa",lat:45.358,lng:-75.905,lv:"Staff",base:110000,tot:125000,yoe:12,fl:"Medium",eng:"contacted",li:"https://linkedin.com/in/vitaly-riger-5868654",pr:"LOW",phone:"",sm:"Digital designer at Marvell Ottawa (formerly Rianta Solutions). 12 years in RTL development for optical networking chips. Works on coherent DSP datapath design within Marvell's WaveLogic platform."},
+  {n:"Deng Mao",ti:"Senior Staff Engineer",loc:"Ottawa",city:"Ottawa",lat:45.360,lng:-75.900,lv:"Senior Staff",base:108709,tot:119667,yoe:8,fl:"Very Low",eng:"uncontacted",li:"https://linkedin.com/in/deng-mao-6b131415b",pr:"LOW",phone:"",sm:"Senior Staff Engineer at Marvell focused on PIC engineering for data center and coherent optical platforms. 8 years in integrated coherent and PAM solutions. Very low flight risk."},
+  // TORONTO / GTA / MARKHAM
+  {n:"Shawn Kermanchi",ti:"Sr. Director of Engineering, Toronto Lead",loc:"Toronto",city:"Toronto",lat:43.695,lng:-79.407,lv:"Director",base:250000,tot:340000,yoe:25,fl:"Medium",eng:"uncontacted",li:"https://linkedin.com/in/shawnkermanchi",pr:"HIGH",phone:"",sm:"Senior Director of Engineering and Toronto site lead at Marvell. 25+ years in semiconductor design leadership. Coordinates Toronto's coherent DSP engineering operations. Uncontacted — high-value strategic conversation target."},
+  {n:"Behzad Dehlaghi",ti:"Senior Principal Engineer",loc:"Toronto",city:"Toronto",lat:43.720,lng:-79.433,lv:"Sr. Principal",base:211421,tot:401523,yoe:17,fl:"Very Low",eng:"contacted",li:"https://linkedin.com/in/bdehlaghi",pr:"MED",phone:"",sm:"Senior Principal Engineer with exceptional $401K total comp. 17 years in analog and mixed-signal IC design for coherent transceivers. Leading expert in ADC/DAC design at 64GS/s+ for 800G/1.6T systems."},
+  {n:"Alexander Zassoko",ti:"Sr. Principal Engineer, ASIC/ML Architecture",loc:"Toronto",city:"Markham",lat:43.860,lng:-79.332,lv:"Sr. Principal",base:195000,tot:260000,yoe:20,fl:"Medium",eng:"replied",li:"https://linkedin.com/in/alexander-zassoko-7734238",pr:"HIGH",phone:"",sm:"Senior Principal Engineer at Marvell Markham bridging ASIC and ML architecture. 20 years in high-performance computing silicon. Expert in neural network accelerators and ML-enhanced DSP pipelines. Replied to Asic Designer outreach."},
+  {n:"Shaham Sharifian",ti:"Principal DSP Architect",loc:"Toronto",city:"Toronto",lat:43.710,lng:-79.418,lv:"Principal",base:225138,tot:263824,yoe:17,fl:"Medium",eng:"uncontacted",li:"https://linkedin.com/in/shaham-sharifian-829a8b92",pr:"HIGH",phone:"",sm:"Principal DSP Architect at Marvell Toronto. 17 years in coherent communications DSP. Top-tier $264K total comp. Expert in advanced modulation, FEC, and adaptive DSP for coherent optical transceivers. Not yet contacted — priority target."},
+  {n:"Colin Li",ti:"Director, Toronto Site Lead",loc:"Toronto",city:"Toronto",lat:43.700,lng:-79.412,lv:"Director",base:190161,tot:290926,yoe:17,fl:"Very Low",eng:"uncontacted",li:"https://linkedin.com/in/licolin",pr:"MED",phone:"",sm:"Director and Toronto site lead for Marvell DSP engineering. 17 years in VLSI design management. Coordinates Toronto ASIC, verification, and DSP teams. Low flight risk but leadership void creates opportunity."},
+  {n:"Mike Bichan",ti:"Director of Analog Design",loc:"Toronto",city:"Toronto",lat:43.710,lng:-79.422,lv:"Director",base:161841,tot:210450,yoe:22,fl:"Very Low",eng:"uncontacted",li:"https://linkedin.com/in/mikebichan",pr:"LOW",phone:"+1 416-540-0379",sm:"Director of Analog Design leading teams designing precision analog circuits for coherent optical ASICs at Marvell Toronto. 22 years managing analog IC development for 100G-800G transceiver platforms."},
+  {n:"Ranjeeth Siddakatte",ti:"Principal Engineer - Machine Learning",loc:"Toronto",city:"Toronto",lat:43.728,lng:-79.400,lv:"Principal",base:202490,tot:324956,yoe:16,fl:"Medium",eng:"contacted",li:"https://linkedin.com/in/ranjeethks",pr:"MED",phone:"",sm:"Principal ML Engineer at Marvell Toronto applying machine learning to coherent DSP optimization. 16 years at intersection of signal processing and AI/ML. Expert in neural network equalizers and ML-driven FEC for next-gen optical systems."},
+  {n:"Arash Abtahi Forooshani",ti:"Principal Engineer",loc:"Toronto",city:"Toronto",lat:43.730,lng:-79.445,lv:"Principal",base:184815,tot:352663,yoe:20,fl:"Medium",eng:"replied",li:"https://linkedin.com/in/arashabtahi",pr:"HIGH",phone:"",sm:"Principal Engineer with 20 years in high-speed digital design and SerDes architecture. Exceptional $353K total comp (RSU-heavy). Expert in adaptive equalization and clock recovery for 400G/800G coherent optical systems. Replied to outreach."},
+  {n:"Albert Wang",ti:"Principal Engineer",loc:"Toronto",city:"Markham",lat:43.856,lng:-79.337,lv:"Principal",base:174102,tot:330497,yoe:14,fl:"Low",eng:"contacted",li:"https://linkedin.com/in/albert227",pr:"MED",phone:"",sm:"Principal Engineer at Marvell Markham. 14 years in digital IC design for coherent DSP platforms. Expert in RTL microarchitecture, ASIC synthesis, and low-power design for optical networking silicon. In active pipeline."},
+  {n:"S. Zeynep Lulec",ti:"Principal Engineer",loc:"Toronto",city:"Toronto",lat:43.730,lng:-79.391,lv:"Principal",base:165000,tot:210000,yoe:15,fl:"Medium",eng:"uncontacted",li:"https://linkedin.com/in/sevilzeyneplulec",pr:"MED",phone:"",sm:"Principal Engineer at Marvell Toronto. PhD. 15 years in analog/mixed-signal IC design for optical networking. Specialist in integrated photonic-electronic design and coherent optical receiver front-ends. Just joined Marvell."},
+  {n:"Javid Musayev",ti:"Principal Analog IC Design Engineer",loc:"Toronto",city:"Toronto",lat:43.700,lng:-79.422,lv:"Principal",base:114550,tot:124773,yoe:13,fl:"Medium",eng:"uncontacted",li:"https://linkedin.com/in/javid-musayev-62712b200",pr:"LOW",phone:"",sm:"Principal Analog IC Design Engineer at Marvell Toronto. 13 years in precision analog circuit design for high-speed optical networking ASICs. Expert in transimpedance amplifiers, laser drivers, and analog front-end design."},
+  {n:"Henry Wang",ti:"Principal Timing Engineer",loc:"Toronto",city:"Toronto",lat:43.730,lng:-79.410,lv:"Principal",base:133863,tot:150087,yoe:25,fl:"Very Low",eng:"uncontacted",li:"https://linkedin.com/in/asichenrywang",pr:"LOW",phone:"",sm:"Principal Timing Engineer at Marvell Toronto. 25 years specializing in timing closure, static timing analysis, and clock distribution for complex ASICs. Deep expertise in timing constraints for coherent DSP chip tapeouts."},
+  {n:"Muhammad Kabir",ti:"Principal Engineer, Signal Integrity",loc:"Toronto",city:"Toronto",lat:43.710,lng:-79.435,lv:"Principal",base:127862,tot:145688,yoe:20,fl:"Very Low",eng:"uncontacted",li:"https://linkedin.com/in/mekabir",pr:"LOW",phone:"",sm:"Principal Signal Integrity Engineer at Marvell Toronto. 20 years in high-speed signal integrity and PCB design for optical networking systems. Expert in 112G/224G SerDes channel analysis for coherent optical modules."},
+  {n:"Reza Mirzaei Nejad",ti:"DSP Architect",loc:"Toronto",city:"Toronto",lat:43.732,lng:-79.440,lv:"Principal",base:125927,tot:143291,yoe:12,fl:"Low",eng:"replied",li:"https://linkedin.com/in/reza-mirzaei-nejad-8a77244b",pr:"MED",phone:"",sm:"DSP Architect at Marvell Toronto. 12 years in coherent optical DSP — chromatic dispersion compensation, polarization demultiplexing, and carrier phase estimation. Replied to Research-DSP-Ottawa outreach."},
+  {n:"Arash Hejazi",ti:"AMS Engineer, Staff",loc:"Toronto",city:"Toronto",lat:43.702,lng:-79.401,lv:"Senior Staff",base:130000,tot:150000,yoe:15,fl:"Medium",eng:"uncontacted",li:"https://linkedin.com/in/arash-hejazi-334259ab",pr:"MED",phone:"",sm:"AMS Staff Engineer at Marvell Toronto. 15 years in analog and mixed-signal circuit design for SerDes and optical coherent ASICs. Expert in CTLE, DFE, and ADC design for 800G optical receivers."},
+  {n:"Han Han",ti:"Senior Engineer, Architect DSP",loc:"Toronto",city:"Toronto",lat:43.730,lng:-79.444,lv:"Senior Staff",base:96042,tot:118547,yoe:3,fl:"Medium",eng:"contacted",li:"https://linkedin.com/in/han-han-johnny",pr:"MED",phone:"",sm:"DSP Architect at Marvell Toronto. Despite junior YOE, holds an Architect title reflecting strong expertise in equalization algorithms for 400G/800G SerDes links. In active outreach pipeline."},
+  {n:"Hamed Hassanisaadi",ti:"Sr. Staff Engineer",loc:"Toronto",city:"Toronto",lat:43.720,lng:-79.413,lv:"Senior Staff",base:134740,tot:151230,yoe:17,fl:"Medium",eng:"uncontacted",li:"https://linkedin.com/in/hamed-hassanisaadi-060292100",pr:"LOW",phone:"",sm:"Senior Staff Engineer at Marvell Toronto. 17 years in mixed-signal IC design for high-speed SerDes and optical networking applications. Supports analog front-end design for coherent optical ASIC platforms."},
+  {n:"Chenxi Tang",ti:"Senior Staff Engineer",loc:"Toronto",city:"Toronto",lat:43.712,lng:-79.432,lv:"Senior Staff",base:109252,tot:120265,yoe:9,fl:"Very Low",eng:"contacted",li:"https://linkedin.com/in/chenxitang96",pr:"LOW",phone:"",sm:"Senior Staff ASIC Engineer at Marvell Toronto. 9 years in digital design and verification. RTL development and design verification for Marvell's coherent optical ASIC platform. In active pipeline."},
+  {n:"M. Ismail (Wagih)",ti:"Senior Staff Engineer",loc:"Toronto",city:"Toronto",lat:43.718,lng:-79.408,lv:"Senior Staff",base:117267,tot:135813,yoe:18,fl:"Medium",eng:"uncontacted",li:"https://linkedin.com/in/mwagih",pr:"LOW",phone:"",sm:"Senior Staff Engineer at Marvell Toronto. 18 years in digital IC design for optical networking. PhD background. Expert in DSP system design and hardware architecture for high-speed communications platforms."},
+  {n:"Shakiba T.",ti:"Senior Design Verification Engineer",loc:"Toronto",city:"Toronto",lat:43.730,lng:-79.447,lv:"Senior Staff",base:98289,tot:104714,yoe:9,fl:"Low",eng:"contacted",li:"https://linkedin.com/in/shakiba-tonekabonipour",pr:"LOW",phone:"",sm:"Senior DV Engineer at Marvell Toronto. 9 years in ASIC design verification. Specializes in UVM testbench development and functional coverage. In active pipeline across multiple outreach projects."},
+  {n:"Eric Liu",ti:"Senior Staff Engineer",loc:"Toronto",city:"Toronto",lat:43.720,lng:-79.440,lv:"Senior Staff",base:121234,tot:134557,yoe:14,fl:"Very Low",eng:"uncontacted",li:"https://linkedin.com/in/eric-tian-ya-liu-7283767a",pr:"LOW",phone:"",sm:"Senior Staff Engineer at Marvell Toronto. 14 years in ASIC design for optical networking. Very low flight risk. Expertise in digital design flow and physical implementation for coherent DSP chips."},
+  {n:"Yifan(Michael) Wang",ti:"Senior AMS Layout Design Engineer",loc:"Toronto",city:"Toronto",lat:43.700,lng:-79.438,lv:"Senior Staff",base:115000,tot:130000,yoe:8,fl:"Medium",eng:"dnc",li:"https://linkedin.com/in/yifan-michael-wang-2b4780231",pr:"LOW",phone:"",sm:"Senior AMS Layout Engineer at Marvell Toronto. 8 years in analog layout for high-speed optical ASIC chips. Recently joined Marvell — DNC tagged currently."},
+  {n:"Mohammad Rafay",ti:"Staff Engineer - Analog Layout",loc:"Toronto",city:"Toronto",lat:43.716,lng:-79.420,lv:"Staff",base:115492,tot:125532,yoe:9,fl:"Very Low",eng:"uncontacted",li:"https://linkedin.com/in/mrafay",pr:"LOW",phone:"",sm:"Staff Analog Layout Engineer at Marvell Toronto. 9 years in full-custom analog layout for mixed-signal CMOS ICs. Expert in precision layout for ADC/DAC and SerDes analog front-ends."},
+  {n:"Hatif Sattar",ti:"Staff Engineer",loc:"Toronto",city:"Toronto",lat:43.720,lng:-79.428,lv:"Staff",base:102251,tot:108695,yoe:16,fl:"Medium",eng:"uncontacted",li:"https://linkedin.com/in/hatifsattar",pr:"LOW",phone:"",sm:"Staff Engineer at Marvell Toronto. 16 years in analog and mixed-signal circuit design. Supporting analog front-end development for coherent optical ASIC platforms."},
+  {n:"Justin Chong-Kit",ti:"Senior Analog Layout Engineer",loc:"Toronto",city:"Toronto",lat:43.700,lng:-79.445,lv:"Staff",base:93902,tot:102624,yoe:17,fl:"Very Low",eng:"uncontacted",li:"https://linkedin.com/in/justinchongkit",pr:"LOW",phone:"",sm:"Senior Analog Layout Engineer at Marvell Toronto. 17 years in full-custom layout for analog and mixed-signal ICs. Expert in high-density layout for SerDes and coherent optical ASIC platforms."},
+  {n:"Raymond Jiang",ti:"Engineer",loc:"Toronto",city:"Toronto",lat:43.710,lng:-79.415,lv:"Staff",base:92848,tot:98584,yoe:12,fl:"Medium",eng:"uncontacted",li:"https://linkedin.com/in/raymond28j",pr:"LOW",phone:"",sm:"Design Engineer at Marvell Toronto. 12 years in digital and mixed-signal circuit design for optical networking applications."},
+  {n:"Nima Soltani",ti:"Analog Design Engineer",loc:"Toronto",city:"Toronto",lat:43.720,lng:-79.425,lv:"Staff",base:83407,tot:89229,yoe:18,fl:"Low",eng:"uncontacted",li:"https://linkedin.com/in/nima-soltani-78a6953b",pr:"LOW",phone:"",sm:"Analog Design Engineer at Marvell Toronto. 18 years in analog circuit design for communications ICs. PhD. Contributes to analog front-end design for Marvell's coherent optical ASIC platforms."},
+  {n:"Dawei Song",ti:"Senior Staff Engineer",loc:"Toronto",city:"Toronto",lat:43.705,lng:-79.416,lv:"Senior Staff",base:109338,tot:121209,yoe:14,fl:"Very Low",eng:"uncontacted",li:"https://linkedin.com/in/dawei-song-53156029",pr:"LOW",phone:"",sm:"Senior Staff Engineer at Marvell Toronto. 14 years in ASIC design for optical networking. Very low flight risk — long-tenured stable contributor."},
+  {n:"Chengjie Wang",ti:"Digital IC Design Senior Staff Engineer",loc:"Toronto",city:"Toronto",lat:43.710,lng:-79.444,lv:"Senior Staff",base:118000,tot:135000,yoe:14,fl:"Medium",eng:"contacted",li:"https://linkedin.com/in/chengjie-wang-63544771",pr:"LOW",phone:"",sm:"Senior Staff Digital IC Design Engineer at Marvell Oakville. 14 years in RTL design for high-speed optical networking silicon. DSP datapath RTL and physical design closure."},
+  // WATERLOO / KITCHENER
+  {n:"Shen Chen",ti:"Senior Firmware Engineer",loc:"Waterloo",city:"Waterloo",lat:43.474,lng:-80.519,lv:"Senior Staff",base:98272,tot:106368,yoe:14,fl:"Very Low",eng:"uncontacted",li:"https://linkedin.com/in/shen-chen-5983b443",pr:"LOW",phone:"",sm:"Senior Firmware Engineer at Marvell in Kitchener/Waterloo. 14 years in embedded firmware for optical networking platforms. Very low flight risk — experienced and stable contributor to firmware team."},
+  // VANCOUVER
+  {n:"Stanley Ho",ti:"Sr. Principal Analog Design Engineer",loc:"Vancouver",city:"Vancouver",lat:49.252,lng:-123.120,lv:"Sr. Principal",base:121854,tot:139196,yoe:19,fl:"Very Low",eng:"uncontacted",li:"https://linkedin.com/in/stanleyskho",pr:"LOW",phone:"",sm:"Senior Principal Analog Design Engineer at Marvell Vancouver. 19 years in precision analog circuit design for SerDes and coherent optical ASICs. Very low flight risk — geographically distant from Ottawa disruption."},
+  {n:"Pavan Terdal",ti:"Senior Staff Design Engineer",loc:"Vancouver",city:"Vancouver",lat:49.260,lng:-123.114,lv:"Senior Staff",base:130000,tot:155000,yoe:10,fl:"Medium",eng:"uncontacted",li:"https://linkedin.com/in/pavan-terdal-65b3a667",pr:"LOW",phone:"",sm:"Senior Staff Design Engineer at Marvell Vancouver. 10 years in ASIC design for networking and optical platforms. Vancouver-based so relatively insulated from Ottawa leadership disruption."},
+  // OTHER / REMOTE
+  {n:"Tony Liu",ti:"Sr. Staff Manager, Firmware Engineering",loc:"Other",city:"Canada",lat:45.420,lng:-75.690,lv:"Sr. Principal",base:159557,tot:232738,yoe:33,fl:"Very Low",eng:"uncontacted",li:"https://linkedin.com/in/tong-tony-liu",pr:"LOW",phone:"",sm:"Senior Staff Manager of Firmware Engineering with 33 years leading embedded software teams. Very low flight risk — highly tenured and deeply embedded organizationally."},
+  {n:"John (Minyi) F.",ti:"Principal Engineer - Digital IC Design",loc:"Other",city:"Canada",lat:45.410,lng:-75.700,lv:"Principal",base:125187,tot:144401,yoe:32,fl:"Medium",eng:"uncontacted",li:"https://linkedin.com/in/minyifu",pr:"LOW",phone:"",sm:"Principal Engineer in digital IC design with 32 years of broad semiconductor expertise. Long career spanning multiple generations of ASIC development for optical networking platforms. Non-metro Canada."},
+  {n:"Erin Woodward",ti:"Principal Engineer - Digital Design",loc:"Other",city:"Canada",lat:45.400,lng:-75.680,lv:"Principal",base:178275,tot:326321,yoe:17,fl:"Low",eng:"uncontacted",li:"https://linkedin.com/in/erin-woodward-888b0448",pr:"MED",phone:"",sm:"Principal Digital Design Engineer at Marvell. 17 years in DSP-centric ASIC design. $326K total comp reflects strong RSU grants. Expert in RTL development, synthesis, and physical design for coherent optical modem chips."},
+  {n:"S. Mohsen Raeis-Zadeh",ti:"Principal System Architect",loc:"Other",city:"Canada",lat:45.415,lng:-75.710,lv:"Principal",base:122511,tot:147149,yoe:13,fl:"Very Low",eng:"contacted",li:"https://linkedin.com/in/s-mohsen-raeis-zadeh-phd-646b4159",pr:"LOW",phone:"",sm:"Principal System Architect at Marvell, PhD. 13 years in optical communications system architecture and coherent DSP. Very low flight risk. In active pipeline via SerDes and System Architect outreach."},
+  {n:"Mahmood Abu Romoh",ti:"Sr. Staff Optical Testing Engineer",loc:"Other",city:"Canada",lat:45.405,lng:-75.695,lv:"Senior Staff",base:120000,tot:140000,yoe:12,fl:"Medium",eng:"screen",li:"https://linkedin.com/in/mahmood-abu-romoh-phd-16a6aa11a",pr:"HIGH",phone:"+1 (613) 408-4049",sm:"Senior Staff optical testing engineer at Marvell with PhD in optical communication systems. 12 years in testing, automation, and Matlab/Python-based optical characterization. Advanced to Recruiter Screen for Coherent Pluggable role."},
+  {n:"Weichao Wang",ti:"Staff Engineer",loc:"Other",city:"Canada",lat:45.418,lng:-75.705,lv:"Staff",base:90000,tot:105000,yoe:8,fl:"Medium",eng:"contacted",li:"https://linkedin.com/in/weichao-wang-60a09bb5",pr:"LOW",phone:"",sm:"Staff Engineer at Marvell Canada working on coherent optical ASIC design. 8 years in digital design and verification. In active outreach pipeline."}
+];
+
+// =============================================================
+// HELPERS
+// =============================================================
+function fmtK(n) { return n ? "$" + Math.round(n / 1000) + "K" : "—"; }
+function fmtD(n) { return n ? "$" + Math.round(n).toLocaleString() : "—"; }
+
+var PAL = ["#0d47a1","#d97706","#15803d","#6d28d9","#b91c1c","#0891b2","#6b7280","#1565c0"];
+
+function locGroup(c) {
+  var l = c.loc || "";
+  if (l === "Ottawa") return "Ottawa";
+  if (l === "Toronto") return "Toronto";
+  if (l === "Waterloo") return "Waterloo";
+  if (l === "Vancouver") return "Vancouver";
+  return "Other";
+}
+
+function flBadge(f) {
+  var m = {
+    "Very High": '<span class="bd bd-r">Very High</span>',
+    "High": '<span class="bd bd-a">High</span>',
+    "Medium": '<span class="bd bd-b">Medium</span>',
+    "Low": '<span class="bd bd-g">Low</span>',
+    "Very Low": '<span class="bd bd-m">Very Low</span>'
+  };
+  return m[f] || f;
+}
+
+function engBadge(e) {
+  var m = {
+    "screen": '<span class="bd bd-p">🎯 Recruiter Screen</span>',
+    "replied": '<span class="bd bd-g">✅ Replied</span>',
+    "contacted": '<span class="bd bd-a">📧 Contacted</span>',
+    "uncontacted": '<span class="bd bd-m">⬜ Not Contacted</span>',
+    "dnc": '<span class="bd bd-r">🚫 DNC</span>'
+  };
+  return m[e] || e;
+}
+
+function lvBadge(l) {
+  var m = {
+    "Distinguished": '<span class="bd bd-p">Distinguished</span>',
+    "Sr. Principal": '<span class="bd bd-b">Sr. Principal</span>',
+    "Director": '<span class="bd bd-a">Director/AVP</span>',
+    "Principal": '<span class="bd bd-b">Principal</span>',
+    "Senior Staff": '<span class="bd bd-g">Senior Staff</span>',
+    "Staff": '<span class="bd bd-m">Staff</span>'
+  };
+  return m[l] || ('<span class="bd bd-m">' + l + '</span>');
+}
+
+function prTag(p) {
+  var m = {
+    "HIGH": '<span class="ptag ph">● HIGH</span>',
+    "MED": '<span class="ptag pm">● MED</span>',
+    "LOW": '<span class="ptag pl">● LOW</span>'
+  };
+  return m[p] || p;
+}
+
+// =============================================================
+// TAB SWITCHING
+// =============================================================
+var tabState = { sal: false, eng: false };
+
+function switchTab(id) {
+  document.querySelectorAll(".panel").forEach(function(p) { p.classList.remove("active"); });
+  document.querySelectorAll(".tab-btn").forEach(function(b) { b.classList.remove("active"); });
+  document.getElementById("panel-" + id).classList.add("active");
+  document.getElementById("tab-" + id).classList.add("active");
+
+  if (id === "cd") { renderTable(currentData); }
+  if (id === "sal" && !tabState.sal) { initSalary(); tabState.sal = true; }
+  if (id === "eng" && !tabState.eng) { initEngagement(); tabState.eng = true; }
+}
+
+// =============================================================
+// OVERVIEW MAP
+// =============================================================
+var ovMap = null;
+function initOvMap() {
+  if (ovMap) return;
+  ovMap = L.map("ov-map", { scrollWheelZoom: false }).setView([45.4, -76.2], 6);
+  L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png", {
+    attribution: "© OpenStreetMap contributors © CARTO", maxZoom: 18
+  }).addTo(ovMap);
+
+  var flClr = { "Very High": "#b91c1c", "High": "#f59e0b", "Medium": "#0d47a1", "Low": "#15803d", "Very Low": "#9ca3af" };
+  var szMap = { "Distinguished": 14, "Sr. Principal": 12, "Director": 12, "Principal": 10, "Senior Staff": 8, "Staff": 6 };
+
+  DATA.forEach(function(c) {
+    if (!c.lat || !c.lng) return;
+    var rad = szMap[c.lv] || 7;
+    var mk = L.circleMarker([c.lat, c.lng], {
+      radius: rad,
+      fillColor: flClr[c.fl] || "#9ca3af",
+      color: "#fff", weight: 1.5, fillOpacity: 0.88
+    }).addTo(ovMap);
+    mk.bindPopup(
+      "<div style='font-family:Inter,sans-serif;min-width:200px;font-size:12px'>" +
+      "<strong style='font-size:13px'>" + c.n + "</strong><br>" +
+      "<span style='color:#374151'>" + c.ti + "</span><br>" +
+      "<span style='color:#6b7280'>📍 " + c.loc + " · " + c.lv + "</span><br><br>" +
+      "<b>Base:</b> " + fmtK(c.base) + " &nbsp; <b>Total:</b> " + fmtK(c.tot) + "<br>" +
+      "<b>YOE:</b> " + c.yoe + " yrs &nbsp; <b>Flight:</b> " + c.fl + "<br>" +
+      "<b>Status:</b> " + c.eng + (c.phone ? "<br><b>Phone:</b> " + c.phone : "") +
+      "</div>"
+    );
+  });
+}
+
+// =============================================================
+// OVERVIEW CHARTS
+// =============================================================
+function initOverviewCharts() {
+  // City doughnut
+  new Chart(document.getElementById("chartCity"), {
+    type: "doughnut",
+    data: {
+      labels: ["Ottawa/Kanata", "Toronto/GTA", "Other Canada", "Waterloo", "Vancouver"],
+      datasets: [{ data: [29, 23, 6, 1, 2], backgroundColor: PAL, borderWidth: 0, hoverOffset: 4 }]
+    },
+    options: { responsive: true, plugins: { legend: { position: "bottom", labels: { font: { size: 11 }, padding: 8 } } } }
+  });
+
+  // Flight risk doughnut
+  new Chart(document.getElementById("chartFlight"), {
+    type: "doughnut",
+    data: {
+      labels: ["Very High (2)", "High (8)", "Medium (25)", "Low (12)", "Very Low (14)"],
+      datasets: [{ data: [2, 8, 25, 12, 14], backgroundColor: ["#b91c1c", "#f59e0b", "#0d47a1", "#15803d", "#9ca3af"], borderWidth: 0 }]
+    },
+    options: { responsive: true, plugins: { legend: { position: "bottom", labels: { font: { size: 11 }, padding: 6 } } } }
+  });
+
+  // Salary by level
+  new Chart(document.getElementById("chartSalLvl"), {
+    type: "bar",
+    data: {
+      labels: ["Staff", "Senior Staff", "Principal", "Sr. Principal", "Director", "Distinguished"],
+      datasets: [{ label: "Avg Base ($K)", data: [97, 115, 161, 196, 228, 262], backgroundColor: PAL, borderRadius: 5 }]
+    },
+    options: {
+      responsive: true,
+      plugins: { legend: { display: false } },
+      scales: { y: { beginAtZero: true, grid: { color: "#f0f0f0" }, ticks: { callback: function(v) { return "$" + v + "K"; } } }, x: { grid: { display: false } } }
+    }
+  });
+
+  // YOE histogram
+  var yoes = DATA.filter(function(c) { return c.yoe; }).map(function(c) { return c.yoe; });
+  var bins = [
+    { l: "1-5 yrs", v: yoes.filter(function(y) { return y < 6; }).length },
+    { l: "6-10 yrs", v: yoes.filter(function(y) { return y >= 6 && y < 11; }).length },
+    { l: "11-15 yrs", v: yoes.filter(function(y) { return y >= 11 && y < 16; }).length },
+    { l: "16-20 yrs", v: yoes.filter(function(y) { return y >= 16 && y < 21; }).length },
+    { l: "21-25 yrs", v: yoes.filter(function(y) { return y >= 21 && y < 26; }).length },
+    { l: "26+ yrs", v: yoes.filter(function(y) { return y >= 26; }).length }
+  ];
+  new Chart(document.getElementById("chartYOE"), {
+    type: "bar",
+    data: { labels: bins.map(function(b) { return b.l; }), datasets: [{ data: bins.map(function(b) { return b.v; }), backgroundColor: PAL, borderRadius: 5 }] },
+    options: { responsive: true, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, grid: { color: "#f0f0f0" } }, x: { grid: { display: false } } } }
+  });
+}
+
+// =============================================================
+// CANDIDATE TABLE
+// =============================================================
+var fLoc = "", fLv = "", fFl = "", fEg = "";
+var currentData = DATA.slice();
+
+// Chip filtering
+document.querySelectorAll(".chip").forEach(function(chip) {
+  chip.addEventListener("click", function() {
+    var grp = chip.dataset.grp;
+    var val = chip.dataset.val;
+    document.querySelectorAll(".chip[data-grp='" + grp + "']").forEach(function(c) { c.classList.remove("active"); });
+    chip.classList.add("active");
+    if (grp === "loc") fLoc = val;
+    else if (grp === "lv") fLv = val;
+    else if (grp === "fl") fFl = val;
+    else if (grp === "eg") fEg = val;
+    applyFilters();
+  });
+});
+
+// Search
+document.getElementById("csearch").addEventListener("input", applyFilters);
+
+function applyFilters() {
+  var q = document.getElementById("csearch").value.toLowerCase();
+  currentData = DATA.filter(function(c) {
+    if (fLoc && locGroup(c) !== fLoc) return false;
+    if (fLv) {
+      var lvCheck = fLv === "Director" ? (c.lv === "Director") : c.lv === fLv;
+      if (!lvCheck) return false;
+    }
+    if (fFl && c.fl !== fFl) return false;
+    if (fEg && c.eng !== fEg) return false;
+    if (q) {
+      var txt = (c.n + " " + c.ti + " " + c.loc + " " + c.sm).toLowerCase();
+      if (txt.indexOf(q) === -1) return false;
+    }
+    return true;
+  });
+  renderTable(currentData);
+  updateFKPIs(currentData);
+}
+
+function updateFKPIs(d) {
+  document.getElementById("fk-total").textContent = d.length;
+  document.getElementById("fk-ot").textContent = d.filter(function(c) { return locGroup(c) === "Ottawa"; }).length;
+  document.getElementById("fk-to").textContent = d.filter(function(c) { return locGroup(c) === "Toronto"; }).length;
+  document.getElementById("fk-hi").textContent = d.filter(function(c) { return c.fl === "Very High" || c.fl === "High"; }).length;
+  document.getElementById("fk-warm").textContent = d.filter(function(c) { return c.eng === "replied" || c.eng === "screen"; }).length;
+  var bases = d.filter(function(c) { return c.base; }).map(function(c) { return c.base; });
+  var avg = bases.length ? Math.round(bases.reduce(function(a, b) { return a + b; }, 0) / bases.length) : 0;
+  document.getElementById("fk-avg").textContent = avg ? fmtK(avg) : "—";
+}
+
+var sDir = 1, sCol = null;
+document.querySelectorAll(".ctbl th[data-sort]").forEach(function(th) {
+  th.addEventListener("click", function() {
+    var key = th.dataset.sort;
+    if (sCol === key) sDir *= -1; else { sCol = key; sDir = 1; }
+    currentData.sort(function(a, b) {
+      var va = a[key], vb = b[key];
+      if (typeof va === "number") return (va - vb) * sDir;
+      return ((va || "").toString().toLowerCase() < (vb || "").toString().toLowerCase() ? -1 : 1) * sDir;
+    });
+    renderTable(currentData);
+  });
+});
+
+function renderTable(d) {
+  var rows = "";
+  d.forEach(function(c) {
+    var phone = c.phone ? "<div class='cphone'>📞 " + c.phone + "</div>" : "";
+    rows += "<tr>" +
+      "<td><span class='cname'>" + c.n + "</span><a href='" + c.li + "' target='_blank' class='clink'>↗ LinkedIn</a>" + phone + "</td>" +
+      "<td><div class='ctitle'>" + c.ti + "</div><div class='cco'>Marvell Technology</div></td>" +
+      "<td>" + c.loc + "</td>" +
+      "<td>" + lvBadge(c.lv) + "</td>" +
+      "<td><span class='salmain'>" + fmtK(c.base) + "</span></td>" +
+      "<td><span class='salmain'>" + fmtK(c.tot) + "</span><div class='salsub'>inc. equity/bonus</div></td>" +
+      "<td style='text-align:center;font-weight:600'>" + (c.yoe || "—") + "</td>" +
+      "<td>" + flBadge(c.fl) + "</td>" +
+      "<td>" + engBadge(c.eng) + "</td>" +
+      "<td>" + prTag(c.pr) + "</td>" +
+      "<td><div class='csum'>" + c.sm.substring(0, 120) + "…</div></td>" +
+      "</tr>";
+  });
+  document.getElementById("ctbody").innerHTML = rows;
+}
+
+// =============================================================
+// SALARY / COST CALCULATOR
+// =============================================================
+var baseLevels = [262000, 196000, 228000, 161000, 115000, 97000];
+
+function runCalc() {
+  var totalHC = 0, totalBase = 0, totalSO = 0, totalRSU = 0, totalBon = 0, totalRec = 0;
+  for (var i = 0; i < 6; i++) {
+    var n = parseFloat(document.getElementById("n" + i).value) || 0;
+    var pct = (parseFloat(document.getElementById("p" + i).value) || 0) / 100;
+    var offerBase = baseLevels[i] * (1 + pct);
+    totalHC += n;
+    totalBase += n * offerBase;
+    totalSO += n * offerBase * 0.10;
+    totalRSU += n * offerBase * 0.70 / 3;
+    totalBon += n * offerBase * 0.12;
+    totalRec += n * offerBase * 0.15;
+  }
+  var tot = totalBase + totalSO + totalRSU + totalBon + totalRec;
+  document.getElementById("o-hc").textContent = totalHC + " engineer" + (totalHC !== 1 ? "s" : "");
+  document.getElementById("o-base").textContent = fmtD(totalBase);
+  document.getElementById("o-so").textContent = fmtD(totalSO);
+  document.getElementById("o-rsu").textContent = fmtD(totalRSU);
+  document.getElementById("o-bon").textContent = fmtD(totalBon);
+  document.getElementById("o-rec").textContent = fmtD(totalRec);
+  document.getElementById("o-tot").textContent = fmtD(tot);
+}
+
+function initSalary() {
+  runCalc();
+
+  new Chart(document.getElementById("chartBands"), {
+    type: "bar",
+    data: {
+      labels: ["Staff", "Sr Staff", "Principal", "Sr Principal", "Director", "Distinguished"],
+      datasets: [
+        { label: "Min", data: [83, 96, 114, 142, 122, 255], backgroundColor: "#bfdbfe", borderRadius: 4 },
+        { label: "Avg", data: [97, 115, 161, 196, 228, 262], backgroundColor: "#0d47a1", borderRadius: 4 },
+        { label: "Max", data: [117, 187, 225, 279, 279, 279], backgroundColor: "#93c5fd", borderRadius: 4 }
+      ]
+    },
+    options: {
+      responsive: true,
+      plugins: { legend: { position: "bottom", labels: { font: { size: 10 }, padding: 6 } } },
+      scales: { y: { beginAtZero: true, grid: { color: "#f0f0f0" }, ticks: { callback: function(v) { return "$" + v + "K"; } } }, x: { grid: { display: false } } }
+    }
+  });
+
+  new Chart(document.getElementById("chartBench"), {
+    type: "bar",
+    data: {
+      labels: ["Distinguished", "Sr. Principal", "Director", "Principal", "Sr. Staff", "Staff"],
+      datasets: [
+        { label: "Marvell today", data: [262, 196, 228, 161, 115, 97], backgroundColor: "#bfdbfe", borderRadius: 4 },
+        { label: "Competitor avg", data: [284, 210, 245, 180, 129, 108], backgroundColor: "#0d47a1", borderRadius: 4 }
+      ]
+    },
+    options: {
+      responsive: true,
+      plugins: { legend: { position: "bottom", labels: { font: { size: 11 } } } },
+      scales: { y: { beginAtZero: true, grid: { color: "#f0f0f0" }, ticks: { callback: function(v) { return "$" + v + "K"; } } }, x: { grid: { display: false } } }
+    }
+  });
+
+  new Chart(document.getElementById("chartOvT"), {
+    type: "bar",
+    data: {
+      labels: ["Distinguished", "Sr. Principal", "Principal", "Sr. Staff", "Staff"],
+      datasets: [
+        { label: "Ottawa avg base", data: [260, 172, 148, 105, 93], backgroundColor: "#0d47a1", borderRadius: 4 },
+        { label: "Toronto avg base", data: [268, 192, 162, 113, 98], backgroundColor: "#90caf9", borderRadius: 4 }
+      ]
+    },
+    options: {
+      responsive: true,
+      plugins: { legend: { position: "bottom", labels: { font: { size: 11 } } } },
+      scales: { y: { beginAtZero: true, grid: { color: "#f0f0f0" }, ticks: { callback: function(v) { return "$" + v + "K"; } } }, x: { grid: { display: false } } }
+    }
+  });
+}
+
+// =============================================================
+// ENGAGEMENT
+// =============================================================
+function initEngagement() {
+  var total = DATA.length;
+  var cts = { screen: 0, replied: 0, contacted: 0, uncontacted: 0, dnc: 0 };
+  DATA.forEach(function(c) { if (cts[c.eng] !== undefined) cts[c.eng]++; });
+
+  var funnel = [
+    { label: "Total Marvell employees mapped", ct: total, col: "#9ca3af" },
+    { label: "Contacted (any status)", ct: cts.contacted + cts.replied + cts.screen, col: "#f59e0b" },
+    { label: "Replied or advanced", ct: cts.replied + cts.screen, col: "#15803d" },
+    { label: "Recruiter Screen", ct: cts.screen, col: "#6d28d9" }
+  ];
+
+  var html = "";
+  funnel.forEach(function(f) {
+    var pct = Math.round(f.ct / total * 100);
+    html += "<div class='fn-row'>" +
+      "<div class='fn-lbl'>" + f.label + "</div>" +
+      "<div class='fn-track'><div class='fn-bar' style='width:" + pct + "%;background:" + f.col + "'>" + f.ct + "</div></div>" +
+      "<div class='fn-ct'>" + f.ct + "</div></div>";
+  });
+  document.getElementById("funnel-wrap").innerHTML = html;
+
+  var lvls = ["Distinguished", "Sr. Principal", "Director", "Principal", "Senior Staff", "Staff"];
+  var tots = lvls.map(function(l) { return DATA.filter(function(c) { return c.lv === l; }).length; });
+  var engs = lvls.map(function(l) { return DATA.filter(function(c) { return c.lv === l && (c.eng === "contacted" || c.eng === "replied" || c.eng === "screen"); }).length; });
+
+  new Chart(document.getElementById("chartEngSen"), {
+    type: "bar",
+    data: {
+      labels: lvls,
+      datasets: [
+        { label: "Total", data: tots, backgroundColor: "#e5e7eb", borderRadius: 4 },
+        { label: "Contacted+", data: engs, backgroundColor: "#0d47a1", borderRadius: 4 }
+      ]
+    },
+    options: {
+      responsive: true,
+      plugins: { legend: { position: "bottom", labels: { font: { size: 11 } } } },
+      scales: { y: { beginAtZero: true, grid: { color: "#f0f0f0" } }, x: { grid: { display: false }, ticks: { font: { size: 10 } } } }
+    }
+  });
+
+  var hot = DATA.filter(function(c) { return c.eng === "replied" || c.eng === "screen"; });
+  var hotHtml = "";
+  hot.forEach(function(c) {
+    hotHtml += "<tr>" +
+      "<td><span class='cname'>" + c.n + "</span><a href='" + c.li + "' target='_blank' class='clink'>↗ LinkedIn</a>" +
+      (c.phone ? "<div class='cphone'>📞 " + c.phone + "</div>" : "") + "</td>" +
+      "<td style='font-size:12px'>" + c.ti + "</td>" +
+      "<td style='font-size:12px'>" + c.loc + "</td>" +
+      "<td>" + fmtK(c.base) + "</td>" +
+      "<td>" + flBadge(c.fl) + "</td>" +
+      "<td>" + engBadge(c.eng) + "</td>" +
+      "<td><button class='act-btn' onclick=\"alert('Ready to follow up with " + c.n.replace(/'/g, "") + "\\n\\nSuggested opening line:\\nHi " + c.n.split(" ")[0] + ", given the recent leadership changes at Marvell Ottawa, I wanted to reach out personally about an exciting opportunity...')\">Follow Up →</button></td>" +
+      "</tr>";
+  });
+  document.getElementById("hotbody").innerHTML = hotHtml;
+}
+
+// =============================================================
+// INIT
+// =============================================================
+document.addEventListener("DOMContentLoaded", function() {
+  initOverviewCharts();
+  initOvMap();
+  renderTable(currentData);
+  updateFKPIs(currentData);
+});
+</script>
+</body>
+</html>
